@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CookBoard — Recipe & Meal Planner</title>
+<!-- Replace this with your actual logo URL -->
+<link rel="icon" href="https://via.placeholder.com/32x32.png?text=CB" />
+
+<style>
+  :root{
+    --bg:#0f1724;
+    --card:#0b1220;
+    --accent:#ff6b35;
+    --muted:#94a3b8;
+    --glass: rgba(255,255,255,0.03);
+    --radius:12px;
+    --max-width:1200px;
+    --shadow: 0 6px 18px rgba(2,6,23,0.6);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background: linear-gradient(180deg,#071021 0%, #081427 55%);
+    color:#e6eef8;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:24px;
+    display:flex;
+    justify-content:center;
+  }
+
+  .app{
+    width:100%;
+    max-width:var(--max-width);
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-bottom:18px;
+  }
+  .brand{
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .logo{
+    width:52px; height:52px; border-radius:10px; overflow:hidden;
+    background:linear-gradient(135deg,#ffffff10,#00000010);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .logo img{width:100%; height:100%; object-fit:cover}
+
+  h1{font-size:20px; margin:0}
+  .tag{color:var(--muted); font-size:13px}
+
+  /* top controls */
+  .top-controls{
+    margin-left:auto;
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .btn{
+    background:var(--accent);
+    border:none; color:#fff; padding:8px 12px; border-radius:10px; cursor:pointer;
+    box-shadow:var(--shadow);
+    font-weight:600;
+  }
+  .ghost{
+    background:transparent; border:1px solid rgba(255,255,255,0.06);
+    padding:8px 12px; border-radius:10px; color:var(--muted);
+  }
+
+  /* layout */
+  .grid{
+    display:grid;
+    grid-template-columns: 360px 1fr 360px;
+    gap:18px;
+  }
+  .panel{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:14px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+
+  /* left: search + list */
+  .search{
+    display:flex; gap:8px; margin-bottom:10px;
+  }
+  .search input{
+    flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03);
+    background:var(--glass); color:inherit;
+  }
+  .filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+  .chip{
+    padding:6px 10px; border-radius:999px; font-size:13px; background:#ffffff08; color:var(--muted);
+    cursor:pointer; border:1px solid rgba(255,255,255,0.02);
+  }
+  .chip.active{background:var(--accent); color:#0b0b0b; font-weight:700}
+
+  .recipe-list{display:flex; flex-direction:column; gap:10px; max-height:65vh; overflow:auto; padding-right:6px}
+  .recipe-card{
+    display:flex; gap:10px; padding:10px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    align-items:center;
+  }
+  .recipe-card img{width:84px; height:64px; object-fit:cover; border-radius:8px}
+  .meta{flex:1}
+  .meta h3{margin:0; font-size:15px}
+  .meta p{margin:4px 0 0; color:var(--muted); font-size:13px}
+  .fav{
+    width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+
+  /* center: planner + content area */
+  .center{
+    display:flex; flex-direction:column; gap:12px;
+  }
+
+  .planner{
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .planner-header{display:flex; justify-content:space-between; align-items:center}
+  .week{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap:8px;
+  }
+  .day{
+    background:#021428; padding:8px; border-radius:10px; min-height:110px; border:1px dashed rgba(255,255,255,0.02);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .day .title{font-size:13px; color:var(--muted); display:flex; justify-content:space-between; align-items:center}
+  .slot{background:rgba(255,255,255,0.03); padding:6px; border-radius:8px; font-size:13px; cursor:grab}
+  .slot.dragover{outline:2px dashed var(--accent)}
+
+  /* center content: recipe viewer */
+  .viewer{
+    display:grid; grid-template-columns: 1fr 320px; gap:12px;
+  }
+  .viewer-main{background:linear-gradient(180deg,#071426,#041024); border-radius:10px; padding:12px}
+  .viewer-main h2{margin:0 0 8px}
+  .viewer-img{width:100%; height:220px; object-fit:cover; border-radius:8px; margin-bottom:8px}
+
+  .ingredients{
+    display:flex; gap:12px; flex-direction:column;
+  }
+  .ingredients ul{margin:0; padding:0; list-style:none}
+  .ingredients li{display:flex; gap:8px; align-items:center; padding:6px 0; color:var(--muted)}
+  .ingredients input[type=checkbox]{width:18px; height:18px}
+
+  .steps{margin-top:10px}
+  .step{
+    background:#021428; padding:8px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .timer-btn{background:transparent; border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:8px; cursor:pointer}
+
+  /* right panel: grocery + saved + comments */
+  .right-col{display:flex; flex-direction:column; gap:12px}
+  .grocery-list{max-height:28vh; overflow:auto; padding-right:6px}
+  .grocery-list li{display:flex; justify-content:space-between; padding:8px; border-radius:8px; align-items:center}
+  .notes textarea{width:100%; height:80px; background:transparent; color:inherit; border-radius:8px; border:1px solid rgba(255,255,255,0.04); padding:8px}
+
+  .comments{max-height:24vh; overflow:auto}
+  .comment{padding:8px; border-radius:8px; background:#021428; margin-bottom:8px}
+  .rating{color:var(--accent); font-weight:700}
+
+  /* responsive */
+  @media (max-width:1100px){
+    .grid{grid-template-columns: 1fr; }
+    .viewer{grid-template-columns:1fr}
+    .center{order:2}
+    .panel{max-width:100%}
+  }
+  @media (max-width:520px){
+    header{flex-direction:column; align-items:flex-start; gap:8px}
+    .top-controls{margin-left:0; margin-top:8px}
+    .recipe-card img{display:none}
+    .logo{width:44px; height:44px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo"><img id="logoImg" src="https://via.placeholder.com/120x120.png?text=CookBoard" alt="CookBoard logo"></div>
+      <div>
+        <h1>CookBoard</h1>
+        <div class="tag">Smart recipes • Planner • Grocery lists</div>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <button class="ghost" id="mobileViewBtn">Toggle Mobile View</button>
+      <button class="btn" id="exportGrocery">Export Grocery</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- LEFT: search + recipes -->
+    <aside class="panel" aria-label="Search and recipe list">
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="Search recipes, ingredients, tags..." />
+        <button class="chip" id="clearSearch">Clear</button>
+      </div>
+      <div class="filters" id="filterRow">
+        <!-- chips inserted by JS -->
+      </div>
+
+      <div class="recipe-list" id="recipeList" aria-live="polite">
+        <!-- recipe cards inserted by JS -->
+      </div>
+    </aside>
+
+    <!-- CENTER: planner and viewer -->
+    <section class="center">
+      <div class="panel planner" role="region" aria-label="Weekly meal planner">
+        <div class="planner-header">
+          <div>
+            <strong>Weekly Planner</strong>
+            <div style="color:var(--muted); font-size:13px">Drag recipes from left into any day slot</div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center">
+            <button class="chip" id="addSample">Add sample to today</button>
+            <button class="chip" id="clearPlanner">Clear planner</button>
+          </div>
+        </div>
+
+        <div class="week" id="weekGrid" aria-hidden="false">
+          <!-- days inserted by JS -->
+        </div>
+      </div>
+
+      <div class="panel viewer" id="viewerPanel" role="region" aria-label="Recipe viewer">
+        <div class="viewer-main" id="viewerMain">
+          <div id="viewerContent">
+            <h2>Select a recipe to view</h2>
+            <p class="tag">Click a recipe or drag it to a planner slot.</p>
+          </div>
+        </div>
+
+        <aside class="panel" id="viewerSide">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div><strong>Recipe Details</strong></div>
+            <div id="viewerActions"></div>
+          </div>
+
+          <div class="ingredients" id="ingredientsPanel">
+            <!-- ingredient items -->
+          </div>
+
+          <div class="steps" id="stepsPanel"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- RIGHT: grocery, saved, comments -->
+    <aside class="panel right-col" aria-label="Grocery and saved">
+      <div>
+        <strong>Grocery List</strong>
+        <ul class="grocery-list" id="groceryList"></ul>
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <button class="btn" id="regenGrocery">Regenerate</button>
+          <button class="ghost" id="clearGrocery">Clear</button>
+        </div>
+      </div>
+
+      <div>
+        <strong>Saved Recipes</strong>
+        <div id="savedList" style="display:flex; gap:8px; flex-direction:column; margin-top:8px"></div>
+      </div>
+
+      <div class="notes">
+        <strong>Notes</strong>
+        <textarea id="globalNotes" placeholder="Personal notes for this week..."></textarea>
+        <div style="margin-top:8px; display:flex; gap:8px">
+          <button class="btn" id="saveNotes">Save Notes</button>
+          <button class="ghost" id="clearNotes">Clear</button>
+        </div>
+      </div>
+
+      <div>
+        <strong>Comments & Ratings</strong>
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <input id="commentName" placeholder="Name" style="flex:1; padding:8px; background:transparent; border-radius:8px; border:1px solid rgba(255,255,255,0.04)" />
+          <select id="ratingSelect" style="padding:8px; border-radius:8px; background:transparent; border:1px solid rgba(255,255,255,0.04)">
+            <option value="5">5 ★</option><option value="4">4 ★</option><option value="3">3 ★</option><option value="2">2 ★</option><option value="1">1 ★</option>
+          </select>
+        </div>
+        <textarea id="commentText" placeholder="Share your experience..." style="margin-top:8px; width:100%; height:64px; border-radius:8px; background:transparent; border:1px solid rgba(255,255,255,0.04); padding:8px"></textarea>
+        <div style="display:flex; gap:8px; margin-top:6px">
+          <button class="btn" id="addComment">Add Comment</button>
+          <button class="ghost" id="clearComments">Clear</button>
+        </div>
+        <div class="comments" id="commentsArea" style="margin-top:8px"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+/*
+  CookBoard demo script
+  - Replace recipes[] with actual data or fetch from an API.
+  - Uses localStorage to persist favorites, planner, notes, and comments.
+*/
+
+// ----------------------------- Mock data (replace with real data) -----------------------------
+const recipes = [
+  {
+    id: 'r1',
+    title: 'Lemon-Herb Roasted Chicken',
+    desc: 'Juicy roasted chicken with bright lemon and rosemary.',
+    tags: ['Dinner', 'Protein', '45m'],
+    img: 'lemon herb roster chicken.jpg',
+    time: 45,
+    difficulty: 'Medium',
+    ingredients: [
+      '1 whole chicken (about 1.6kg)',
+      '2 lemons, halved',
+      '3 tbsp olive oil',
+      '2 sprigs rosemary',
+      'salt & pepper'
+    ],
+    steps: [
+      { text: 'Preheat oven to 220°C. Pat chicken dry.', minutes: 5 },
+      { text: 'Rub with oil, season with salt, pepper, rosemary & lemon.', minutes: 8 },
+      { text: 'Roast 35–45 minutes until juices run clear.', minutes: 45 }
+    ],
+    rating: 4.6,
+    comments: [
+      { name: 'Asha', rating:5, text: 'Perfect for family dinner!' }
+    ]
+  },
+  {
+    id: 'r2',
+    title: 'Vibrant Chickpea Buddha Bowl',
+    desc: 'Protein-rich bowl with roasted chickpeas and tahini dressing.',
+    tags: ['Lunch', 'Vegan', '25m'],
+    img: 'vibrant chickpea buddabowl.jpg',
+    time: 25,
+    difficulty: 'Easy',
+    ingredients: [
+      '1 can chickpeas, drained',
+      '1 avocado, sliced',
+      'mixed greens',
+      '2 tbsp tahini',
+      '1 lemon'
+    ],
+    steps: [
+      { text: 'Roast chickpeas at 200°C for 15 minutes.', minutes: 15 },
+      { text: 'Assemble bowl with greens, avocado and dressing.', minutes: 5 }
+    ],
+    rating: 4.8,
+    comments: []
+  },
+  {
+    id: 'r3',
+    title: 'One-Pot Tomato Basil Pasta',
+    desc: 'Simple pasta cooked in a fragrant tomato-basil broth.',
+    tags: ['Dinner', 'Vegetarian', '20m'],
+    img: 'onepot tamto basil pasta.jpg',
+    time: 20,
+    difficulty: 'Easy',
+    ingredients: [
+      '300g spaghetti',
+      '1 can crushed tomatoes',
+      '2 cloves garlic',
+      'handful fresh basil',
+      'parmesan to serve'
+    ],
+    steps: [
+      { text: 'Combine pasta, tomatoes, garlic and water and simmer until pasta is cooked.', minutes: 12 },
+      { text: 'Stir in basil and top with parmesan.', minutes: 3 }
+    ],
+    rating: 4.5,
+    comments: []
+  }
+];
+
+// ----------------------------- state & persistence -----------------------------
+const state = {
+  recipes,
+  filters: new Set(),
+  query: '',
+  selectedRecipe: null,
+  planner: JSON.parse(localStorage.getItem('cookboard_planner') || '{}'), // shape: { dayIndex: [recipeId,...] }
+  favorites: new Set(JSON.parse(localStorage.getItem('cookboard_favorites') || '[]')),
+  notes: JSON.parse(localStorage.getItem('cookboard_notes') || '{}'),
+  comments: JSON.parse(localStorage.getItem('cookboard_comments') || '[]')
+};
+
+const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// ----------------------------- helpers -----------------------------
+function el(tag, attrs={}, children=[]){
+  const e = document.createElement(tag);
+  for(const k in attrs){
+    if(k === 'class') e.className = attrs[k];
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  (Array.isArray(children)?children:[children]).forEach(c=>{
+    if(!c) return;
+    if(typeof c === 'string') e.appendChild(document.createTextNode(c));
+    else e.appendChild(c);
+  });
+  return e;
+}
+
+function saveState(){
+  localStorage.setItem('cookboard_planner', JSON.stringify(state.planner));
+  localStorage.setItem('cookboard_favorites', JSON.stringify(Array.from(state.favorites)));
+  localStorage.setItem('cookboard_notes', JSON.stringify(state.notes));
+  localStorage.setItem('cookboard_comments', JSON.stringify(state.comments));
+}
+
+// ----------------------------- UI renderers -----------------------------
+const filterRow = document.getElementById('filterRow');
+const recipeList = document.getElementById('recipeList');
+const weekGrid = document.getElementById('weekGrid');
+const viewerContent = document.getElementById('viewerContent');
+const ingredientsPanel = document.getElementById('ingredientsPanel');
+const stepsPanel = document.getElementById('stepsPanel');
+const groceryListEl = document.getElementById('groceryList');
+const savedListEl = document.getElementById('savedList');
+const commentsArea = document.getElementById('commentsArea');
+
+function uniqueTags(){
+  const s = new Set();
+  state.recipes.forEach(r=> r.tags.forEach(t=> s.add(t)));
+  return Array.from(s);
+}
+
+function renderFilters(){
+  filterRow.innerHTML = '';
+  const tags = uniqueTags();
+  tags.forEach(t=>{
+    const chip = el('button',{class:'chip'+(state.filters.has(t)?' active':''), onclick:()=>{
+      if(state.filters.has(t)) state.filters.delete(t); else state.filters.add(t);
+      renderFilters();
+      renderRecipeList();
+    }}, t);
+    filterRow.appendChild(chip);
+  });
+}
+
+function recipeMatches(recipe){
+  // search + filters
+  const q = state.query.trim().toLowerCase();
+  const matchQuery = !q || recipe.title.toLowerCase().includes(q) || recipe.desc.toLowerCase().includes(q) || recipe.ingredients.join(' ').toLowerCase().includes(q);
+  const matchFilters = state.filters.size === 0 || recipe.tags.some(t=> state.filters.has(t));
+  return matchQuery && matchFilters;
+}
+
+function renderRecipeList(){
+  recipeList.innerHTML = '';
+  const filtered = state.recipes.filter(recipeMatches);
+  filtered.forEach(r=>{
+    const card = el('div',{class:'recipe-card', draggable:true, ondragstart:(ev)=>{
+      ev.dataTransfer.setData('text/plain', r.id);
+      ev.dataTransfer.effectAllowed = 'copy';
+    }, onclick: ()=> selectRecipe(r.id)});
+    const img = el('img',{src:r.img, alt:r.title});
+    const meta = el('div',{class:'meta'}, [
+      el('h3',{}, r.title),
+      el('p',{}, r.desc)
+    ]);
+    const favBtn = el('div',{class:'fav', onclick:(ev)=>{
+      ev.stopPropagation();
+      toggleFavorite(r.id);
+    }}, state.favorites.has(r.id) ? '★' : '☆');
+
+    card.appendChild(img);
+    card.appendChild(meta);
+    card.appendChild(favBtn);
+    recipeList.appendChild(card);
+  });
+
+  if(filtered.length === 0){
+    recipeList.appendChild(el('div',{}, 'No recipes found. Try clearing filters or search.'));
+  }
+}
+
+function selectRecipe(id){
+  const r = state.recipes.find(x=>x.id===id);
+  if(!r) return;
+  state.selectedRecipe = r;
+  viewerContent.innerHTML = `
+    <img class="viewer-img" src="${r.img}" alt="${r.title}">
+    <h2>${r.title}</h2>
+    <div class="tag">${r.desc}</div>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <div class="chip">⏱ ${r.time}m</div>
+      <div class="chip">${r.difficulty}</div>
+      <div class="chip">${r.tags.join(' • ')}</div>
+    </div>
+    <div style="margin-top:12px;">
+      <strong>Overview</strong>
+      <p style="color:var(--muted); margin:6px 0 0">${r.desc}</p>
+    </div>
+  `;
+
+  // viewer side actions
+  const viewerActions = document.getElementById('viewerActions');
+  viewerActions.innerHTML = '';
+  const fav = el('button',{class:'chip', onclick: ()=> toggleFavorite(r.id)}, state.favorites.has(r.id) ? 'Unsave' : 'Save');
+  viewerActions.appendChild(fav);
+
+  // ingredients
+  ingredientsPanel.innerHTML = '<strong>Ingredients</strong>';
+  const ul = el('ul');
+  r.ingredients.forEach(ing=>{
+    const li = el('li',{}, [
+      el('input',{type:'checkbox', onchange: (e)=> {
+        li.style.opacity = e.target.checked ? 0.5 : 1;
+      }}),
+      document.createTextNode(' '+ing)
+    ]);
+    ul.appendChild(li);
+  });
+  ingredientsPanel.appendChild(ul);
+
+  // steps with timers
+  stepsPanel.innerHTML = '<strong>Steps</strong>';
+  r.steps.forEach((s, idx)=>{
+    const step = el('div',{class:'step'}, [
+      el('div',{}, `${idx+1}. ${s.text}`),
+      el('div',{}, [
+        el('button',{class:'timer-btn', onclick: ()=> startStepTimer(r.id, idx)}, `Start ${s.minutes}m`)
+      ])
+    ]);
+    stepsPanel.appendChild(step);
+  });
+
+  // comments
+  renderComments();
+}
+
+function toggleFavorite(id){
+  if(state.favorites.has(id)) state.favorites.delete(id); else state.favorites.add(id);
+  saveState();
+  renderRecipeList();
+  renderSaved();
+}
+
+function renderSaved(){
+  savedListEl.innerHTML = '';
+  const list = Array.from(state.favorites).map(id => state.recipes.find(r=>r.id===id)).filter(Boolean);
+  if(list.length === 0) savedListEl.appendChild(el('div',{}, 'No saved recipes yet.'));
+  list.forEach(r=>{
+    const item = el('div',{style:'display:flex; justify-content:space-between; align-items:center; gap:8px'}, [
+      el('div',{}, r.title),
+      el('div',{}, [
+        el('button',{class:'chip', onclick:()=> selectRecipe(r.id)}, 'View'),
+        el('button',{class:'ghost', onclick:()=> { state.favorites.delete(r.id); saveState(); renderSaved(); renderRecipeList(); }}, 'Remove')
+      ])
+    ]);
+    savedListEl.appendChild(item);
+  });
+}
+
+// Planner
+function renderWeek(){
+  weekGrid.innerHTML = '';
+  for(let i=0;i<7;i++){
+    const dayBox = el('div',{class:'day', ondragover:(e)=>{ e.preventDefault(); dayBox.classList.add('dragover'); }, ondragleave:()=>dayBox.classList.remove('dragover'), ondrop:(e)=> {
+      e.preventDefault(); dayBox.classList.remove('dragover');
+      const recipeId = e.dataTransfer.getData('text/plain');
+      addToPlanner(i, recipeId);
+    }});
+    const title = el('div',{class:'title'}, [ el('div',{}, days[i]), el('div',{}, new Date(Date.now() + (i*24*60*60*1000)).toLocaleDateString()) ]);
+    dayBox.appendChild(title);
+
+    const list = el('div',{style:'display:flex; flex-direction:column; gap:8px; margin-top:6px'});
+    const entries = state.planner[i] || [];
+    entries.forEach((rid, idx)=>{
+      const r = state.recipes.find(x=>x.id===rid);
+      if(!r) return;
+      const slot = el('div',{class:'slot', draggable:true, ondragstart:(ev)=>{ ev.dataTransfer.setData('text/plain', JSON.stringify({fromDay:i, index:idx})); }}, [
+        el('div',{}, r.title),
+        el('div',{}, [ el('button',{class:'ghost', onclick: (ev)=> { ev.stopPropagation(); removeFromPlanner(i, idx); }}, 'Remove') ])
+      ]);
+      list.appendChild(slot);
+    });
+
+    // allow dropping existing slot between days for rearrange
+    list.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      const data = e.dataTransfer.getData('text/plain');
+      try {
+        const obj = JSON.parse(data);
+        if(obj.fromDay !== undefined){
+          // move between days
+          const rid = state.planner[obj.fromDay][obj.index];
+          state.planner[obj.fromDay].splice(obj.index,1);
+          state.planner[i] = state.planner[i] || [];
+          state.planner[i].push(rid);
+          saveState(); renderWeek(); generateGroceryList();
+        }
+      } catch(err){}
+    });
+
+    dayBox.appendChild(list);
+    weekGrid.appendChild(dayBox);
+  }
+}
+
+function addToPlanner(dayIndex, recipeId){
+  const r = state.recipes.find(x=>x.id===recipeId);
+  if(!r) return;
+  state.planner[dayIndex] = state.planner[dayIndex] || [];
+  state.planner[dayIndex].push(recipeId);
+  saveState();
+  renderWeek();
+  generateGroceryList();
+}
+
+// remove
+function removeFromPlanner(dayIndex, idx){
+  if(!state.planner[dayIndex]) return;
+  state.planner[dayIndex].splice(idx,1);
+  saveState();
+  renderWeek();
+  generateGroceryList();
+}
+
+// Grocery generation (merges ingredients)
+function generateGroceryList(){
+  const items = {};
+  Object.values(state.planner).flat().forEach(rid=>{
+    const r = state.recipes.find(x=>x.id===rid);
+    if(!r) return;
+    r.ingredients.forEach(ing=>{
+      items[ing] = (items[ing] || 0) + 1;
+    });
+  });
+  // turn into array
+  groceryListEl.innerHTML = '';
+  const arr = Object.keys(items);
+  if(arr.length === 0) groceryListEl.appendChild(el('div',{}, 'No items — add recipes to planner.'));
+  arr.forEach(i=>{
+    const li = el('li',{}, [
+      el('div',{}, i),
+      el('div',{}, [
+        el('button',{class:'ghost', onclick: (ev)=> { ev.stopPropagation(); toggleGroceryCheck(ev.target) }}, 'Edit')
+      ])
+    ]);
+    groceryListEl.appendChild(li);
+  });
+}
+
+// providers for grocery edit — simple prompt
+function toggleGroceryCheck(btn){
+  const li = btn.closest('li');
+  const cur = li.querySelector('div').innerText;
+  const edited = prompt('Edit grocery item:', cur);
+  if(edited === null) return;
+  li.querySelector('div').innerText = edited;
+}
+
+// Comments
+function renderComments(){
+  commentsArea.innerHTML = '';
+  const comments = state.comments;
+  if(comments.length === 0) commentsArea.appendChild(el('div',{}, 'No comments yet.'));
+  comments.forEach(c=>{
+    const card = el('div',{class:'comment'}, [
+      el('div',{}, `${c.name} — `),
+      el('div',{class:'rating'}, ` ${c.rating} ★`),
+      el('div',{}, c.text)
+    ]);
+    commentsArea.appendChild(card);
+  });
+}
+
+// timers: simple step timers that count minutes -> seconds
+const timers = {};
+function startStepTimer(recipeId, stepIdx){
+  const r = state.recipes.find(x=>x.id===recipeId);
+  if(!r) return;
+  const minutes = r.steps[stepIdx].minutes || 1;
+  const key = recipeId+'_'+stepIdx;
+  if(timers[key]) {
+    clearInterval(timers[key].interval);
+    delete timers[key];
+    alert('Timer cleared');
+    return;
+  }
+  let remaining = minutes*60;
+  timers[key] = {
+    remaining,
+    interval: setInterval(()=>{
+      remaining--;
+      if(remaining <= 0){
+        clearInterval(timers[key].interval);
+        delete timers[key];
+        alert(`Step finished: ${r.title} — Step ${stepIdx+1}`);
+      }
+    }, 1000)
+  };
+  alert(`Timer started for ${minutes} minute(s). You will be alerted when done.`);
+}
+
+// ----------------------------- controls & listeners -----------------------------
+document.getElementById('searchInput').addEventListener('input', (e)=> {
+  state.query = e.target.value;
+  renderRecipeList();
+});
+document.getElementById('clearSearch').addEventListener('click', ()=>{
+  state.query = '';
+  document.getElementById('searchInput').value = '';
+  renderRecipeList();
+});
+document.getElementById('addSample').addEventListener('click', ()=>{
+  addToPlanner(new Date().getDay() % 7, state.recipes[0].id);
+});
+document.getElementById('clearPlanner').addEventListener('click', ()=>{
+  if(confirm('Clear planner?')) {
+    state.planner = {};
+    saveState();
+    renderWeek();
+    generateGroceryList();
+  }
+});
+document.getElementById('regenGrocery').addEventListener('click', generateGroceryList);
+document.getElementById('clearGrocery').addEventListener('click', ()=>{
+  if(confirm('Clear grocery list? This will only clear generated view; planner stays.')) groceryListEl.innerHTML = '';
+});
+document.getElementById('saveNotes').addEventListener('click', ()=>{
+  state.notes.week = document.getElementById('globalNotes').value;
+  saveState();
+  alert('Notes saved');
+});
+document.getElementById('clearNotes').addEventListener('click', ()=>{
+  document.getElementById('globalNotes').value = '';
+  state.notes.week = '';
+  saveState();
+});
+document.getElementById('addComment').addEventListener('click', ()=>{
+  const name = document.getElementById('commentName').value || 'Anonymous';
+  const rating = parseInt(document.getElementById('ratingSelect').value || '5',10);
+  const text = document.getElementById('commentText').value || '';
+  if(!text.trim()) { alert('Please add a comment'); return; }
+  state.comments.push({name, rating, text});
+  saveState();
+  renderComments();
+  alert('Thanks for your feedback!');
+  document.getElementById('commentText').value = '';
+});
+document.getElementById('clearComments').addEventListener('click', ()=>{
+  if(confirm('Clear all comments?')) { state.comments = []; saveState(); renderComments(); }
+});
+
+document.getElementById('exportGrocery').addEventListener('click', ()=>{
+  // simple export: create text file
+  let text = 'Grocery List - CookBoard\\n\\n';
+  groceryListEl.querySelectorAll('li').forEach(li=>{
+    const left = li.querySelector('div').innerText;
+    text += '- ' + left + '\\n';
+  });
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cookboard-grocery.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+// mobile view toggle purely cosmetic
+document.getElementById('mobileViewBtn').addEventListener('click', ()=>{
+  document.querySelector('.grid').classList.toggle('mobile-preview');
+  alert('Toggled compact layout (demo only)');
+});
+
+// load saved notes
+document.getElementById('globalNotes').value = state.notes.week || '';
+
+// initial render
+renderFilters();
+renderRecipeList();
+renderWeek();
+renderSaved();
+generateGroceryList();
+renderComments();
+
+// auto-select first recipe for convenience
+if(state.recipes.length) selectRecipe(state.recipes[0].id);
+
+// keyboard: press 'g' to regenerate grocery quickly
+document.addEventListener('keydown', (e)=> { if(e.key === 'g') generateGroceryList(); });
+
+</script>
+</body>
+</html>
